@@ -7,11 +7,7 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description="split dataset and augment train set")
-parser.add_argument('--batch',
-        type=str,
-        required=True,
-        help='Batch identifier to replace "batch1+2" in file and folder names (e.g., "batch1").'
-    )
+parser.add_argument('--batch', type=str, required=True, help='Batch identifier to replace "batch1+2" in file and folder names (e.g., "batch1").')
 args = parser.parse_args() 
 batch_num = args.batch
 
