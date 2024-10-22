@@ -8,13 +8,18 @@ from torchvision import models, transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from sklearn.metrics import mean_squared_error, r2_score
+import argparse
 import warnings
 warnings.filterwarnings("ignore")
 
-label_name = 'Firmness'
-batch = '4cbatch1'
-num_epochs = 300
+parser = argparse.ArgumentParser(description="split dataset and augment train set")
+parser.add_argument('--batch', type=str, required=True, help='Batch identifier to replace "batch1+2" in file and folder names (e.g., "batch1").')
+parser.add_argument('--num_epochs', type=int, default=300, help='Number of training epochs')
+args = parser.parse_args() 
+batch = args.batch
+num_epochs = args.num_epochs
 
+label_name = 'Firmness'
 
 # Custom dataset class
 class CustomDataset(Dataset):
@@ -46,22 +51,18 @@ transform = transforms.Compose([
 
 # Create training dataset and data loader
 train_image_label_map = np.load(f'dictfile/{batch}_train.npy', allow_pickle=True).item()
-train_dataset = CustomDataset(root_dir=f'dataset/{batch}_train', image_label_map=train_image_label_map, transform=transform)
+train_dataset = CustomDataset(root_dir=f'dataset_split/{batch}_train', image_label_map=train_image_label_map, transform=transform)
 train_data_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
 # Create validation dataset and data loader
 val_image_label_map = np.load(f'dictfile/{batch}_validation.npy', allow_pickle=True).item()
-val_dataset = CustomDataset(root_dir=f'dataset/{batch}_val', image_label_map=val_image_label_map, transform=transform)
+val_dataset = CustomDataset(root_dir=f'dataset_split/{batch}_val', image_label_map=val_image_label_map, transform=transform)
 val_data_loader = DataLoader(val_dataset, batch_size=32)
 
 # Create testing dataset and data loader
 test_image_label_map = np.load(f'dictfile/{batch}_test.npy', allow_pickle=True).item()
-test_dataset = CustomDataset(root_dir=f'dataset/{batch}_test', image_label_map=test_image_label_map, transform=transform)
+test_dataset = CustomDataset(root_dir=f'dataset_split/{batch}_test', image_label_map=test_image_label_map, transform=transform)
 test_data_loader = DataLoader(test_dataset, batch_size=32)
-
-
-
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Create ResNet model and move it to GPU
@@ -82,6 +83,8 @@ best_model_weights = None  # Initialize best model weights to None
 train_losses = []
 val_losses = []
 
+if not os.path.exists('RegressionWeights'):
+    os.mkdir('RegressionWeights')
 
 # Train the model
 for epoch in range(num_epochs):
@@ -112,12 +115,9 @@ for epoch in range(num_epochs):
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         best_model_weights = resnet.state_dict()
-        torch.save(best_model_weights, f'Weights/{batch}_Best_{num_epochs}.pth')
+        torch.save(best_model_weights, f'RegressionWeights/{batch}_Best_{num_epochs}.pth')
 
-torch.save(resnet.state_dict(), f'Weights/{batch}_Last_{num_epochs}.pth')
-
-
-
+torch.save(resnet.state_dict(), f'RegressionWeights/{batch}_Last_{num_epochs}.pth')
 
 # Plot the training and validation loss curves
 plt.figure(figsize=(10, 5))
@@ -128,8 +128,7 @@ plt.ylabel('Loss')
 plt.title('Training and Validation Loss')
 plt.legend()
 plt.grid(True)
+if not os.path.exists('LossFunction'):
+    os.mkdir('LossFunction')
 plt.savefig(f'LossFunction/{batch}_{num_epochs}.png')
-plt.show()
-
-
-
+plt.close()
